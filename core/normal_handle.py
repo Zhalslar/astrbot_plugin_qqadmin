@@ -17,10 +17,17 @@ class NormalHandle:
 
     async def set_group_ban(self, event: AiocqhttpMessageEvent, ban_time=None):
         """禁言 60 @user"""
+        max_ban_time = 2592000  # 一个月的秒数（30天）
         if not ban_time or not isinstance(ban_time, int):
-            ban_time = random.randint(
-                *map(int, self.conf["random_ban_time"].split("~"))
-            )
+            # 如果没有指定禁言时间或不是整数，则随机生成
+            random_ban_time_range = list(map(int, self.conf["random_ban_time"].split("~")))
+            # 确保随机范围的最大值不超过一个月
+            random_ban_time_range[1] = min(random_ban_time_range[1], max_ban_time)
+            ban_time = random.randint(*random_ban_time_range)
+        else:
+            # 如果指定了禁言时间，确保不超过一个月
+            ban_time = min(ban_time, max_ban_time)
+
         for tid in get_ats(event):
             try:
                 await event.bot.set_group_ban(
