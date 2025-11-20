@@ -629,5 +629,24 @@
         "default": "成员"
       }
     }
+  },
+  "query": {
+    "description": "历史消息查询配置",
+    "hint": "用于控制获取群聊历史消息的行为参数",
+    "type": "object",
+    "items": {
+      "query_rounds": {
+        "description": "查询回合数",
+        "hint": "获取群聊历史消息的循环次数，每次循环会获取一批消息",
+        "type": "int",
+        "default": 10
+      },
+      "query_counts": {
+        "description": "每回合消息数量",
+        "hint": "每次循环从群聊历史中获取的消息数量",
+        "type": "int",
+        "default": 200
+      }
+    }
   }
 }
