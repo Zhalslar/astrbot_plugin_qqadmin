@@ -13,11 +13,11 @@ from astrbot.core.utils.session_waiter import SessionController, session_waiter
 from ..utils import format_time, get_nickname
 
 if TYPE_CHECKING:
-    from data.plugins.astrbot_plugin_qqadmin.main import QQAdminPlugin
+    from ..main import QQAdminPlugin
 
 
 class MemberHandle:
-    def __init__(self, plugin: "QQAdminPlugin"):
+    def __init__(self, plugin: QQAdminPlugin):
         self.plugin = plugin
 
     async def get_group_member_list(self, event: AiocqhttpMessageEvent):

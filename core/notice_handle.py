@@ -14,10 +14,10 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
 from ..utils import download_file, extract_image_url
 
 if TYPE_CHECKING:
-    from data.plugins.astrbot_plugin_qqadmin.main import QQAdminPlugin
+    from ..main import QQAdminPlugin
 
 class NoticeHandle:
-    def __init__(self, plugin: "QQAdminPlugin", data_dir: Path):
+    def __init__(self, plugin: QQAdminPlugin, data_dir: Path):
         self.plugin = plugin
         self.data_dir = data_dir
 
