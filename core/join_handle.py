@@ -374,7 +374,11 @@ class JoinHandle:
 
     async def set_auto_reject_without_keyword(self, event: AiocqhttpMessageEvent):
         """设置本群未命中关键词自动拒绝开关"""
-        arg = event.message_str.strip().split(" ")[1]
+        parts = event.message_str.strip().split()
+        if len(parts) < 2:
+            await event.send(event.plain_result("请提供参数：开/关/清除"))
+            return
+        arg = parts[1]
         group_id = event.get_group_id()
 
         if arg in ("开", "开启", "on", "true", "1"):
@@ -406,7 +410,11 @@ class JoinHandle:
 
     async def set_auto_blacklist_on_reject_keyword(self, event: AiocqhttpMessageEvent):
         """设置本群命中黑词自动拉黑开关"""
-        arg = event.message_str.strip().split(" ")[1]
+        parts = event.message_str.strip().split()
+        if len(parts) < 2:
+            await event.send(event.plain_result("请提供参数：开/关/清除"))
+            return
+        arg = parts[1]
         group_id = event.get_group_id()
 
         if arg in ("开", "开启", "on", "true", "1"):
