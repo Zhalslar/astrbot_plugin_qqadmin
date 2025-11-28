@@ -9,10 +9,11 @@ from astrbot.core.message.components import File, Image, Reply, Video
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
-from data.plugins.astrbot_plugin_qqadmin.utils import download_file
+
+from ..utils import download_file
 
 if TYPE_CHECKING:
-    from data.plugins.astrbot_plugin_qqadmin.main import QQAdminPlugin
+    from ..main import QQAdminPlugin
 
 
 class FileHandle:

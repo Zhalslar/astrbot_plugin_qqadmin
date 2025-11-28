@@ -7,7 +7,8 @@ from astrbot.core.config.astrbot_config import AstrBotConfig
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
-from data.plugins.astrbot_plugin_qqadmin.utils import get_ats, get_nickname
+
+from ..utils import get_ats, get_nickname
 
 
 class LLMHandle:
