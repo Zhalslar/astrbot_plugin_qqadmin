@@ -251,7 +251,23 @@ class QQAdminPlugin(Star):
     async def view_accept_keywords(self, event: AiocqhttpMessageEvent):
         await self.join.view_accept_keywords(event)
 
+    @filter.command("添加进群黑词", desc="添加进群黑名单关键词（命中即拒绝）")
+    @perm_required(PermLevel.ADMIN)
+    async def add_reject_keywords(self, event: AiocqhttpMessageEvent):
+        await self.join.add_reject_keywords(event)
+
+    @filter.command("删除进群黑词", desc="删除进群黑名单关键词")
+    @perm_required(PermLevel.ADMIN)
+    async def remove_reject_keywords(self, event: AiocqhttpMessageEvent):
+        await self.join.remove_reject_keywords(event)
+
+    @filter.command("查看进群黑词", desc="查看进群黑名单关键词", alias={"进群黑词"})
+    @perm_required(PermLevel.ADMIN)
+    async def view_reject_keywords(self, event: AiocqhttpMessageEvent):
+        await self.join.view_reject_keywords(event)
+
     @filter.command("添加进群黑名单", desc="添加指定ID到进群黑名单")
+    @perm_required(PermLevel.ADMIN)
     async def add_reject_ids(self, event: AiocqhttpMessageEvent):
         """添加指定ID到进群黑名单"""
         await self.join.add_reject_ids(event)
@@ -265,6 +281,36 @@ class QQAdminPlugin(Star):
     @perm_required(PermLevel.ADMIN)
     async def view_reject_ids(self, event: AiocqhttpMessageEvent):
         await self.join.view_reject_ids(event)
+
+    @filter.command("设置进群等级", desc="设置本群进群等级门槛，设为0则清除")
+    @perm_required(PermLevel.ADMIN)
+    async def set_level_threshold(self, event: AiocqhttpMessageEvent):
+        await self.join.set_level_threshold(event)
+
+    @filter.command("查看进群等级", desc="查看本群进群等级门槛", alias={"进群等级"})
+    @perm_required(PermLevel.ADMIN)
+    async def view_level_threshold(self, event: AiocqhttpMessageEvent):
+        await self.join.view_level_threshold(event)
+
+    @filter.command("设置无词拒绝", desc="设置本群未命中关键词自动拒绝开关")
+    @perm_required(PermLevel.ADMIN)
+    async def set_auto_reject_without_keyword(self, event: AiocqhttpMessageEvent):
+        await self.join.set_auto_reject_without_keyword(event)
+
+    @filter.command("查看无词拒绝", desc="查看本群未命中关键词自动拒绝状态", alias={"无词拒绝"})
+    @perm_required(PermLevel.ADMIN)
+    async def view_auto_reject_without_keyword(self, event: AiocqhttpMessageEvent):
+        await self.join.view_auto_reject_without_keyword(event)
+
+    @filter.command("设置黑词拉黑", desc="设置本群命中黑词自动拉黑开关")
+    @perm_required(PermLevel.ADMIN)
+    async def set_auto_blacklist_on_reject_keyword(self, event: AiocqhttpMessageEvent):
+        await self.join.set_auto_blacklist_on_reject_keyword(event)
+
+    @filter.command("查看黑词拉黑", desc="查看本群命中黑词自动拉黑状态", alias={"黑词拉黑"})
+    @perm_required(PermLevel.ADMIN)
+    async def view_auto_blacklist_on_reject_keyword(self, event: AiocqhttpMessageEvent):
+        await self.join.view_auto_blacklist_on_reject_keyword(event)
 
     @filter.command("批准", desc="批准进群申请", alias={"同意进群"})
     @perm_required(PermLevel.ADMIN)
