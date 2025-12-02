@@ -144,10 +144,11 @@ class JoinHandle:
     @staticmethod
     def _parse_mode(mode: str | bool | None):
         """解析模式"""
+        mode = str(mode).strip().lower()
         match mode:
-            case "开", "开启", "on", "true", "1", True:
+            case "开" | "开启" | "on" | "true" | "1":
                 return True
-            case "关", "关闭", "off", "false", "0", False:
+            case "关" | "关闭" | "off" | "false" | "0":
                 return False
             case _:
                 return None
@@ -158,16 +159,15 @@ class JoinHandle:
         self, event: AiocqhttpMessageEvent, mode_str: str | bool | None
     ):
         """设置/查看本群进群审核开关"""
+        print(repr(mode_str))
         gid = event.get_group_id()
         mode = self._parse_mode(mode_str)
-        if mode is True:
-            self.db.set_switch(gid, True)
-            await event.send(event.plain_result("已开启本群进群审核"))
-        elif mode is False:
-            self.db.set_switch(gid, False)
-            await event.send(event.plain_result("已关闭本群进群审核"))
+        print(mode)
+        if isinstance(mode, bool):
+            self.db.set_switch(gid, mode)
+            await event.send(event.plain_result(f"本群进群审核：{mode}"))
         else:
-            status = "开启" if self.db.get_switch(gid) else "关闭"
+            status = self.db.get_switch(gid)
             await event.send(event.plain_result(f"本群进群审核：{status}"))
 
     async def handle_accept_keyword(self, event: AiocqhttpMessageEvent):
@@ -175,22 +175,20 @@ class JoinHandle:
         gid = event.get_group_id()
         if keywords := event.message_str.removeprefix("进群白词").strip().split():
             self.db.set_accept_keywords(gid, keywords)
-            await event.send(
-                event.plain_result(f"本群的进群关键词已设置为：{keywords}")
-            )
+            await event.send(event.plain_result(f"本群进群白词已设为：{keywords}"))
         else:
             keywords = self.db.get_accept_keywords(gid)
-            await event.send(event.plain_result(f"本群的进群关键词：{keywords}"))
+            await event.send(event.plain_result(f"本群进群白词：{keywords}"))
 
     async def handle_reject_keywords(self, event: AiocqhttpMessageEvent):
         """设置/查看进群黑名单关键词"""
         gid = event.get_group_id()
         if keywords := event.message_str.removeprefix("进群黑词").strip().split():
             self.db.set_reject_keywords(gid, keywords)
-            await event.send(event.plain_result(f"新增进群黑名单关键词：{keywords}"))
+            await event.send(event.plain_result(f"本群进群黑词已设为：{keywords}"))
         else:
             keywords = self.db.get_reject_keywords(gid)
-            await event.send(event.plain_result(f"本群的进群黑名单关键词：{keywords}"))
+            await event.send(event.plain_result(f"本群进群黑词：{keywords}"))
 
     async def handle_level_threshold(
         self, event: AiocqhttpMessageEvent, level: int | None
@@ -200,14 +198,14 @@ class JoinHandle:
         if isinstance(level, int):
             self.db.set_min_level(gid, level)
             msg = (
-                f"已设置本群进群等级门槛：{level}级"
+                f"本群进群等级门槛已设为：{level} 级"
                 if level > 0
                 else "已解除本群的进群等级限制"
             )
             await event.send(event.plain_result(msg))
         else:
             level = self.db.get_min_level(gid)
-            await event.send(event.plain_result(f"本群的进群等级门槛: {level}级"))
+            await event.send(event.plain_result(f"本群进群等级门槛: {level} 级"))
 
     async def handle_join_time(self, event: AiocqhttpMessageEvent, time: int | None):
         """设置最大进群次数"""
@@ -215,27 +213,60 @@ class JoinHandle:
         if isinstance(time, int):
             self.db.set_max_time(gid, time)
             msg = (
-                f"已限制本群进群次数：{time}次"
+                f"本群进群次数已限制为：{time} 次"
                 if time > 0
                 else "已解除本群的进群次数限制"
             )
             await event.send(event.plain_result(msg))
         else:
             time = self.db.get_max_time(gid)
-            await event.send(event.plain_result(f"本群的进群最多可尝试 {time} 次"))
+            await event.send(event.plain_result(f"本群进群可尝试次数：{time} 次"))
 
     async def handle_block_ids(self, event: AiocqhttpMessageEvent):
-        """设置/查看进群黑名单"""
+        """设置/查看进群黑名单（支持 +id 增加、-id 删除，纯数字覆写）"""
         gid = event.get_group_id()
-        if ids := event.message_str.removeprefix("进群黑名单").strip().split():
-            self.db.set_block_ids(gid, ids)
-            await event.send(event.plain_result(f"进群黑名单已更新：{ids}"))
-        else:
+        raw = event.message_str.removeprefix("进群黑名单").strip()
+
+        # 仅查询
+        if not raw:
             ids = self.db.get_block_ids(gid)
-            await event.send(event.plain_result(f"本群的进群黑名单：{ids}"))
+            await event.send(event.plain_result(f"本群进群黑名单：{ids}"))
+            return
+
+        # 覆写模式：全部是数字（可空格分隔）
+        if all(tok.isdigit() for tok in raw.split()):
+            new_ids = raw.split()
+            self.db.set_block_ids(gid, new_ids)
+            await event.send(event.plain_result(f"黑名单已覆写为：{' '.join(new_ids)}"))
+            return
+
+        # 增减模式
+        curr = set(self.db.get_block_ids(gid))
+        added, removed = [], []
+        for tok in raw.split():
+            if tok.startswith("+") and tok[1:].isdigit():
+                uid = tok[1:]
+                if uid not in curr:
+                    curr.add(uid)
+                    added.append(uid)
+            elif tok.startswith("-") and tok[1:].isdigit():
+                uid = tok[1:]
+                if uid in curr:
+                    curr.discard(uid)
+                    removed.append(uid)
+        self.db.set_block_ids(gid, list(curr))
+
+        # 只反馈实际变动的
+        reply = ["本群进群黑名单"]
+        if added:
+            reply.append(f"新增：{'、'.join(added)}")
+        if removed:
+            reply.append(f"移除：{'、'.join(removed)}")
+        if not added and not removed:
+            reply.append("无变动")
+        await event.send(event.plain_result("\n".join(reply)))
 
     # ---------辅助函数-----------------
-
     def should_approve(
         self,
         group_id: str,
@@ -264,7 +295,7 @@ class JoinHandle:
             # 4.命中进群白词
             akws = self.db.get_accept_keywords(group_id)
             if akws and any(ak.lower() in lower_comment for ak in akws):
-                return True, "验证通过"
+                return True, "命中进群白词"
 
         # 5.最大失败次数（考虑到只是防爆破，存内存里足矣，重启清零）
         max_fail = self.db.get_max_time(group_id)
@@ -308,14 +339,17 @@ class JoinHandle:
         ):
             comment = raw.get("comment")
             flag = raw.get("flag", "")
-            stranger_info = await client.get_stranger_info(user_id=int(user_id))
-            nickname = stranger_info.get("nickname") or "未知昵称"
-            user_level = stranger_info.get("qqLevel") or stranger_info.get("level") or 0
+            info = await client.get_stranger_info(user_id=int(user_id))
+            nickname = info.get("nickname") or "未知昵称"
+            if info.get("isHideQQLevel"):
+                level = None
+            else:
+                level = info.get("qqLevel") or info.get("level")
 
             # 生成并发送通知
             notice = f"【进群申请】批准/驳回：\n昵称：{nickname}\nQQ：{user_id}\nflag：{flag}"
-            if user_level is not None:
-                notice += f"\n等级：{user_level}"
+            if level is not None:
+                notice += f"\n等级：{level}"
             if comment:
                 notice += f"\n{comment}"
             if self.jconf["admin_audit"]:
@@ -325,7 +359,7 @@ class JoinHandle:
 
             # 判断是否通过
             approve, reason = self.should_approve(
-                group_id, user_id, comment, user_level
+                group_id, user_id, comment, level
             )
             # 清理缓存
             if approve is True:
@@ -341,7 +375,7 @@ class JoinHandle:
                     approve=approve,
                     reason="" if approve else reason,
                 )
-                msg = f"已自动{'批准' if approve else '驳回'}: {reason}"
+                msg = f"自动{'批准' if approve else '驳回'}: {reason}"
                 if self.jconf["admin_audit"]:
                     await self._send_admin(client, msg)
                 else:
