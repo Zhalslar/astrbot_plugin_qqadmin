@@ -124,7 +124,7 @@ class QQAdminDB:
     async def get_reject_words(self, group_id: str) -> list[str]:
         return list((await self.get(group_id)).get("reject_words", []))
 
-    async def get_no_match_reject(self, group_id: str, reject: bool):
+    async def get_no_match_reject(self, group_id: str):
         return bool((await self.get(group_id)).get("no_match_reject", False))
 
     async def get_min_level(self, group_id: str) -> int:
