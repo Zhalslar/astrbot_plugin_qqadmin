@@ -209,6 +209,12 @@ class QQAdminPlugin(Star):
         """禁词 词1 词2 ..."""
         await self.banpro.handle_ban_words(event)
 
+    @filter.command("增加禁词", alias={"添加禁词"})
+    @perm_required(PermLevel.ADMIN, perm_key="word_ban")
+    async def handle_add_ban_words(self, event: AiocqhttpMessageEvent):
+        """增加禁词 词1 词2 ...（在原有基础上添加）"""
+        await self.banpro.handle_add_ban_words(event)
+
     @filter.command("内置禁词")
     @perm_required(PermLevel.ADMIN, perm_key="word_ban")
     async def handle_ban_words(
@@ -236,6 +242,26 @@ class QQAdminPlugin(Star):
     async def spamming_ban(self, event: AiocqhttpMessageEvent):
         """刷屏检测与禁言"""
         await self.banpro.spamming_ban(event)
+
+    @filter.command("链接撤回")
+    @perm_required(PermLevel.ADMIN, perm_key="link_recall")
+    async def handle_link_recall(
+        self, event: AiocqhttpMessageEvent, mode: str | bool | None = None
+    ):
+        """链接撤回 开/关"""
+        await self.banpro.handle_link_recall(event, mode)
+
+    @filter.command("链接白名单")
+    @perm_required(PermLevel.ADMIN, perm_key="link_recall")
+    async def handle_link_whitelist(self, event: AiocqhttpMessageEvent):
+        """链接白名单 域名1 域名2 ..."""
+        await self.banpro.handle_link_whitelist(event)
+
+    @filter.platform_adapter_type(filter.PlatformAdapterType.AIOCQHTTP)
+    @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
+    async def on_link_recall(self, event: AiocqhttpMessageEvent):
+        """自动检测链接并撤回"""
+        await self.banpro.on_link_recall(event)
 
     @filter.command("投票禁言", desc="投票禁言 <秒数> @群友")
     @perm_required(PermLevel.ADMIN, perm_key="vote")

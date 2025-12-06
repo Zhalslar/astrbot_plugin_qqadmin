@@ -108,6 +108,18 @@
         "hint": "当用户刷屏时触发禁言该用户，设置为 0 表示不启用此功能",
         "type": "int",
         "default": 0
+      },
+      "link_recall": {
+        "description": "链接撤回",
+        "hint": "开启后，非白名单的链接会被自动撤回（不禁言）",
+        "type": "bool",
+        "default": false
+      },
+      "link_whitelist": {
+        "description": "链接白名单",
+        "hint": "白名单域名列表，包含这些域名的链接不会被撤回，如：www.qq.com",
+        "type": "list",
+        "default": []
       }
     }
   },
@@ -381,6 +393,19 @@
       "word_ban": {
         "description": "禁词指令",
         "hint": "包括：禁词禁言 <时长>、设置禁词、内置禁词 <开 | 关>",
+        "type": "string",
+        "options": [
+          "超管",
+          "群主",
+          "管理员",
+          "高等级成员",
+          "成员"
+        ],
+        "default": "管理员"
+      },
+      "link_recall": {
+        "description": "链接撤回指令",
+        "hint": "包括：链接撤回 <开 | 关>、链接白名单",
         "type": "string",
         "options": [
           "超管",

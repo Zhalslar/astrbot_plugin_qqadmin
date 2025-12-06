@@ -33,6 +33,8 @@ class QQAdminDB:
         "custom_ban_words": "自定义违禁词",
         "word_ban_time": "禁词禁言时长",
         "spamming_ban_time": "刷屏禁言时长",
+        "link_recall": "链接撤回",
+        "link_whitelist": "链接白名单",
     }
 
     REVERSE_FIELD_MAP = {v: k for k, v in FIELD_MAP.items()}
