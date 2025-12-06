@@ -1,6 +1,7 @@
 import asyncio
 import random
 from pathlib import Path
+import re
 
 from astrbot import logger
 from astrbot.api.event import filter
@@ -444,20 +445,27 @@ class QQAdminPlugin(Star):
     @filter.command("群管配置", alias={"群管设置"})
     @perm_required(PermLevel.MEMBER, check_at=False)
     async def set_config(self, event: AiocqhttpMessageEvent):
-        """群管配置 <参数>, 第一个参数为数字则视为群号。用来批量修改群管参数"""
-        raw = event.message_str.partition(" ")[2]
-
-        # 第一个参数若为数字，则表示群号
-        start_arg = raw.partition(" ")[0]
-        gid = start_arg if start_arg.isdigit() else event.get_group_id()
-
-        if raw:
-            await self.db.import_cn_lines(gid, raw)
-            config_str = await self.db.export_cn_lines(gid)
-            yield event.plain_result(f"【群管配置】更新:\n{config_str}")
-        else:
+        """群管配置 <群号 | 留空> <配置串>"""
+        raw: str = event.message_str.partition(" ")[2].strip()
+        if not raw:  # 空串，仅查询
+            gid = event.get_group_id()
             config_str = await self.db.export_cn_lines(gid)
             yield event.plain_result(f"【群管配置】\n{config_str}")
+            return
+
+        # 正则：^(\d+)\s+(.+)  捕获“数字 + 空格 + 剩余串”
+        m = re.match(r"(\d+)\s+(.+)", raw)
+        if m:
+            gid = str(m.group(1))
+            arg = m.group(2)
+        else:
+            gid = event.get_group_id()
+            arg = raw
+
+        # 更新配置
+        await self.db.import_cn_lines(gid, arg)
+        config_str = await self.db.export_cn_lines(gid)
+        yield event.plain_result(f"【群管配置】更新:\n{config_str}")
 
     @filter.command("群管重置")
     @perm_required(PermLevel.MEMBER, check_at=False)
