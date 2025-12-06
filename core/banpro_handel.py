@@ -5,6 +5,7 @@ import re
 import time
 from collections import defaultdict, deque
 from pathlib import Path
+from urllib.parse import urlparse
 
 from astrbot.api import logger
 from astrbot.core.config.astrbot_config import AstrBotConfig
@@ -344,20 +345,67 @@ class BanproHandle:
             await event.send(event.plain_result(f"本群链接撤回：{'开启' if status else '关闭'}"))
 
     async def handle_link_whitelist(self, event: AiocqhttpMessageEvent):
-        """设置/查看链接白名单"""
+        """设置/查看/增删链接白名单
+        
+        用法：
+        - 链接白名单          → 查看当前白名单
+        - 链接白名单 +域名    → 添加域名到白名单
+        - 链接白名单 -域名    → 从白名单移除域名
+        - 链接白名单 域名1 域名2 → 覆盖设置整个白名单
+        """
         gid = event.get_group_id()
+        args = event.message_str.partition(" ")[2].split()
 
-        # 设置白名单
-        if domains := event.message_str.partition(" ")[2].split():
-            await self.db.set(gid, "link_whitelist", domains)
-            await event.send(event.plain_result(f"本群链接白名单已设为：{domains}"))
-        else:
+        if not args:
             # 查看白名单
             domains = await self.db.get(gid, "link_whitelist", [])
             if domains:
                 await event.send(event.plain_result(f"本群链接白名单：{domains}"))
             else:
                 await event.send(event.plain_result("本群链接白名单为空"))
+            return
+
+        # 检查是否为增删操作
+        existing = await self.db.get(gid, "link_whitelist", [])
+        to_add = []
+        to_remove = []
+        to_set = []
+
+        for arg in args:
+            if arg.startswith("+"):
+                to_add.append(arg[1:])
+            elif arg.startswith("-"):
+                to_remove.append(arg[1:])
+            else:
+                to_set.append(arg)
+
+        # 如果有不带前缀的参数，视为覆盖整个白名单
+        if to_set:
+            if to_add or to_remove:
+                await event.send(event.plain_result(
+                    "不能混合使用：请只用 +/- 增删，或只用不带前缀的域名覆盖设置"
+                ))
+                return
+            await self.db.set(gid, "link_whitelist", to_set)
+            await event.send(event.plain_result(f"本群链接白名单已设为：{to_set}"))
+        else:
+            # 增删操作
+            updated = existing.copy()
+            for domain in to_add:
+                if domain and domain not in updated:
+                    updated.append(domain)
+            for domain in to_remove:
+                if domain in updated:
+                    updated.remove(domain)
+            
+            await self.db.set(gid, "link_whitelist", updated)
+            msg_parts = []
+            if to_add:
+                msg_parts.append(f"已添加：{to_add}")
+            if to_remove:
+                msg_parts.append(f"已移除：{to_remove}")
+            msg_parts.append(f"当前白名单：{updated}")
+            await event.send(event.plain_result("\n".join(msg_parts)))
 
     async def on_link_recall(self, event: AiocqhttpMessageEvent):
         """检测链接并撤回（不禁言）"""
@@ -387,21 +435,25 @@ class BanproHandle:
                     await event.bot.delete_msg(message_id=int(message_id))
                     logger.info(f"已撤回群{gid}中用户{event.get_sender_id()}的链接消息")
                 except Exception:
-                    logger.error(f"bot在群{gid}权限不足，撤回链接消息失败")
+                    logger.exception(f"撤回群{gid}中链接消息失败")
                 return
 
     def _is_url_whitelisted(self, url: str, whitelist: list[str]) -> bool:
         """检查链接是否在白名单中"""
-        # 提取域名
-        url_lower = url.lower()
-        # 移除协议前缀
-        if url_lower.startswith("http://"):
-            url_lower = url_lower[7:]
-        elif url_lower.startswith("https://"):
-            url_lower = url_lower[8:]
+        # 如果没有协议，添加 http:// 以便 urlparse 正确解析
+        url_to_parse = url if "://" in url else f"http://{url}"
+        
+        try:
+            parsed = urlparse(url_to_parse)
+            # 获取主机名（自动处理端口号）
+            hostname = parsed.hostname or ""
+            domain = hostname.lower()
+        except Exception:
+            # 解析失败时回退到简单处理
+            domain = url.lower().split("/")[0].split(":")[0]
 
-        # 获取域名部分（去除路径）
-        domain = url_lower.split("/")[0]
+        if not domain:
+            return False
 
         # 检查域名是否匹配白名单
         for white_domain in whitelist:
