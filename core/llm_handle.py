@@ -80,26 +80,8 @@ class LLMHandle:
             logger.error(f"LLM 调用失败：{e}")
             return None
 
-
-
-    async def ai_set_card(self, event: AiocqhttpMessageEvent):
-        """让AI设置群友的群名片"""
-        at_ids = get_ats(event)
-        target_id = at_ids[0] if at_ids else event.get_sender_id()
-        end_arg = event.message_str.split()[-1]
-        query_rounds = (
-            int(end_arg) if end_arg.isdigit() else self.conf["llm_get_msg_count"]
-        )
-        raw_card = await get_nickname(event, target_id)
-
-        logger.info(f"正在根据{raw_card}（{target_id}）的聊天记录生成新昵称...")
-
-        contexts = await self.get_msg_contexts(event, target_id, query_rounds)
-        if not contexts:
-            await event.send(event.plain_result("聊天记录为空"))
-            return
-        logger.debug(f"获取到{raw_card}（{target_id}）的聊天记录：{contexts}")
-
+    async def get_llm_nick(self, contexts) -> tuple[str | None, str]:
+        """调用LLM生成昵称"""
         system_prompt = (
             "请你扮演一名起名专家，根据这位群友的聊天记录，生成一个昵称。\n"
             "注意：昵称要简洁且符合这位群友的人格特征。\n"
@@ -111,33 +93,69 @@ class LLMHandle:
             system_prompt=system_prompt, contexts=contexts
         )
         if not llm_respond:
-            await event.send(event.plain_result("LLM响应为空"))
-            return
+            return None, "LLM响应为空"
 
         # 提取 **加粗** 的内容
         match = re.search(r"\*\*(.+?)\*\*", llm_respond)
         if not match:
-            await event.send(
-                event.plain_result(f"未能从LLM回复中提取到昵称: {llm_respond}")
-            )
-            return
+            return None, "未能从LLM回复中提取到昵称"
         # 保留中英文，最多8个字符
         new_card = re.sub(r"[^a-zA-Z\u4e00-\u9fff]", "", match.group(1))[:8]
 
         # 提取单引号内的内容（理由）
         reason_match = re.search(r"'([^']*)'", llm_respond)
-        if not reason_match:
-            await event.send(
-                event.plain_result(f"未能从LLM回复中提取到取昵称的理由: {llm_respond}")
-            )
-            return
-        reason = reason_match.group(1)
+        reason = reason_match.group(1) if reason_match else ""
 
+        return new_card, reason
+
+    async def parse_args(self, event: AiocqhttpMessageEvent):
+        at_ids = get_ats(event)
+        target_id = at_ids[0] if at_ids else event.get_sender_id()
+        end_arg = event.message_str.split()[-1]
+        query_rounds = (
+            int(end_arg) if end_arg.isdigit() else self.conf["llm_get_msg_count"]
+        )
+        raw_card = await get_nickname(event, target_id)
+        return target_id, raw_card, query_rounds
+
+    async def ai_set_card(self, event: AiocqhttpMessageEvent):
+        """接口：设置群昵称"""
+        target_id, raw_card, query_rounds = await self.parse_args(event)
+        logger.info(f"正在根据{raw_card}（{target_id}）的聊天记录生成新昵称...")
+        contexts = await self.get_msg_contexts(event, target_id, query_rounds)
+        if not contexts:
+            await event.send(event.plain_result("聊天记录为空"))
+            return
+        logger.debug(f"获取到{raw_card}（{target_id}）的聊天记录：{contexts}")
+        nick, reason = await self.get_llm_nick(contexts)
+        if not nick:
+            await event.send(event.plain_result(f"生成失败：{reason}"))
+            return
         await event.bot.set_group_card(
             group_id=int(event.get_group_id()),
             user_id=int(target_id),
-            card=new_card,
+            card=nick,
         )
-        await event.send(event.plain_result(f"根据最近的{len(contexts)}条消息给'{raw_card}'取的新昵称：{new_card}"))
+        await event.send(event.plain_result(f"给{raw_card}取的新昵称：{nick}"))
         await event.send(event.plain_result(f"理由：{reason}"))
-        logger.info(f"已为 {target_id} 设置群昵称: {new_card}, 理由：{reason}")
+
+    async def ai_set_title(self, event: AiocqhttpMessageEvent):
+        """接口：设置群头衔"""
+        target_id, raw_card, query_rounds = await self.parse_args(event)
+        logger.info(f"正在根据{raw_card}（{target_id}）的聊天记录生成新头衔...")
+        contexts = await self.get_msg_contexts(event, target_id, query_rounds)
+        if not contexts:
+            await event.send(event.plain_result("聊天记录为空"))
+            return
+        logger.debug(f"获取到{raw_card}（{target_id}）的聊天记录：{contexts}")
+        nick, reason = await self.get_llm_nick(contexts)
+        if not nick:
+            await event.send(event.plain_result(f"生成失败：{reason}"))
+            return
+        await event.bot.set_group_special_title(
+            group_id=int(event.get_group_id()),
+            user_id=int(target_id),
+            special_title=nick,
+        )
+        await event.send(event.plain_result(f"给{raw_card}取的新头衔：{nick}"))
+        await event.send(event.plain_result(f"理由：{reason}"))

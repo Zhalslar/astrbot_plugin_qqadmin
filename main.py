@@ -417,6 +417,12 @@ class QQAdminPlugin(Star):
         """取名@群友 <消息轮数>"""
         await self.llm.ai_set_card(event)
 
+    @filter.command("取头衔")
+    @perm_required(PermLevel.OWNER, check_at=False)
+    async def ai_set_title(self, event: AiocqhttpMessageEvent):
+        """取名@群友 <消息轮数>"""
+        await self.llm.ai_set_title(event)
+
     @filter.llm_tool()  # type: ignore
     async def llm_set_group_ban(
         self, event: AiocqhttpMessageEvent, user_id: str, duration: int

@@ -553,6 +553,18 @@
         ],
         "default": "高等级成员"
       },
+      "ai_set_title": {
+        "description": "取头衔",
+        "type": "string",
+        "options": [
+          "超管",
+          "群主",
+          "管理员",
+          "高等级成员",
+          "成员"
+        ],
+        "default": "管理员"
+      },
       "set_config": {
         "description": "群管配置",
         "type": "string",
