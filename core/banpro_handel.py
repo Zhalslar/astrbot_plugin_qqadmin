@@ -1,9 +1,11 @@
 import asyncio
 import json
 import random
+import re
 import time
 from collections import defaultdict, deque
 from pathlib import Path
+from urllib.parse import urlparse
 
 from astrbot.api import logger
 from astrbot.core.config.astrbot_config import AstrBotConfig
@@ -16,6 +18,13 @@ from ..utils import get_ats, get_nickname, parse_bool
 
 
 class BanproHandle:
+    # 匹配链接的正则表达式
+    URL_PATTERN = re.compile(
+        r'https?://([a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}[-a-zA-Z0-9@:%._+~#=/?&]*|'
+        r'([a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}[-a-zA-Z0-9@:%._+~#=/?&]*',
+        re.IGNORECASE
+    )
+
     def __init__(self, config: AstrBotConfig, db: QQAdminDB, ban_lexicon_path: Path):
         self.conf = config
         self.db = db
@@ -63,6 +72,20 @@ class BanproHandle:
             words = await self.db.get(gid, "custom_ban_words", [])
             await event.send(event.plain_result(f"本群违禁词：{words}"))
 
+    async def handle_add_ban_words(self, event: AiocqhttpMessageEvent):
+        """增加违禁词（在原有基础上添加）"""
+        gid = event.get_group_id()
+
+        if new_words := event.message_str.partition(" ")[2].split():
+            # 获取现有违禁词
+            existing = await self.db.get(gid, "custom_ban_words", [])
+            # 合并并去重
+            merged = list(dict.fromkeys(existing + new_words))
+            await self.db.set(gid, "custom_ban_words", merged)
+            await event.send(event.plain_result(f"已添加违禁词：{new_words}\n当前违禁词：{merged}"))
+        else:
+            await event.send(event.plain_result("请指定要添加的违禁词，用空格分隔"))
+
     async def handle_builtin_ban_words(
         self, event: AiocqhttpMessageEvent, mode_str: str | bool | None
     ):
@@ -81,7 +104,10 @@ class BanproHandle:
         """检测禁词并撤回消息、禁言用户"""
         gid = event.get_group_id()
         ban_words = await self.db.get(gid, "custom_ban_words", [])
-        if not ban_words:
+        builtin_enabled = await self.db.get(gid, "builtin_ban", False)
+
+        # 如果两个都没启用，直接返回
+        if not ban_words and not builtin_enabled:
             return
 
         # 检测自定义的违禁词
@@ -90,7 +116,7 @@ class BanproHandle:
                 return
 
         # 检测内置违禁词
-        if await self.db.get(gid, "builtin_ban", False):
+        if builtin_enabled:
             if await self.check_ban_words(event, self.builtin_ban_words):
                 return
 
@@ -300,3 +326,139 @@ class BanproHandle:
                 f"禁言【{nickname}】：\n赞同({agree_count}/{threshold})\n反对({disagree_count}/{threshold})"
             )
         )
+
+    # ==================== 链接撤回功能 ====================
+
+    async def handle_link_recall(
+        self, event: AiocqhttpMessageEvent, mode_str: str | bool | None
+    ):
+        """启用/停用链接撤回"""
+        gid = event.get_group_id()
+        mode = parse_bool(mode_str)
+
+        if isinstance(mode, bool):
+            await self.db.set(gid, "link_recall", mode)
+            status = "开启" if mode else "关闭"
+            await event.send(event.plain_result(f"本群链接撤回已{status}"))
+        else:
+            status = await self.db.get(gid, "link_recall", False)
+            await event.send(event.plain_result(f"本群链接撤回：{'开启' if status else '关闭'}"))
+
+    async def handle_link_whitelist(self, event: AiocqhttpMessageEvent):
+        """设置/查看/增删链接白名单
+        
+        用法：
+        - 链接白名单          → 查看当前白名单
+        - 链接白名单 +域名    → 添加域名到白名单
+        - 链接白名单 -域名    → 从白名单移除域名
+        - 链接白名单 域名1 域名2 → 覆盖设置整个白名单
+        """
+        gid = event.get_group_id()
+        args = event.message_str.partition(" ")[2].split()
+
+        if not args:
+            # 查看白名单
+            domains = await self.db.get(gid, "link_whitelist", [])
+            if domains:
+                await event.send(event.plain_result(f"本群链接白名单：{domains}"))
+            else:
+                await event.send(event.plain_result("本群链接白名单为空"))
+            return
+
+        # 检查是否为增删操作
+        existing = await self.db.get(gid, "link_whitelist", [])
+        to_add = []
+        to_remove = []
+        to_set = []
+
+        for arg in args:
+            if arg.startswith("+"):
+                to_add.append(arg[1:])
+            elif arg.startswith("-"):
+                to_remove.append(arg[1:])
+            else:
+                to_set.append(arg)
+
+        # 如果有不带前缀的参数，视为覆盖整个白名单
+        if to_set:
+            if to_add or to_remove:
+                await event.send(event.plain_result(
+                    "不能混合使用：请只用 +/- 增删，或只用不带前缀的域名覆盖设置"
+                ))
+                return
+            await self.db.set(gid, "link_whitelist", to_set)
+            await event.send(event.plain_result(f"本群链接白名单已设为：{to_set}"))
+        else:
+            # 增删操作
+            updated = existing.copy()
+            for domain in to_add:
+                if domain and domain not in updated:
+                    updated.append(domain)
+            for domain in to_remove:
+                if domain in updated:
+                    updated.remove(domain)
+            
+            await self.db.set(gid, "link_whitelist", updated)
+            msg_parts = []
+            if to_add:
+                msg_parts.append(f"已添加：{to_add}")
+            if to_remove:
+                msg_parts.append(f"已移除：{to_remove}")
+            msg_parts.append(f"当前白名单：{updated}")
+            await event.send(event.plain_result("\n".join(msg_parts)))
+
+    async def on_link_recall(self, event: AiocqhttpMessageEvent):
+        """检测链接并撤回（不禁言）"""
+        gid = event.get_group_id()
+
+        # 检查是否开启链接撤回
+        link_recall_enabled = await self.db.get(gid, "link_recall", False)
+        if not link_recall_enabled:
+            return
+
+        # 查找消息中的链接
+        url_matches = list(self.URL_PATTERN.finditer(event.message_str))
+        if not url_matches:
+            return
+
+        # 获取白名单
+        whitelist = await self.db.get(gid, "link_whitelist", [])
+
+        # 检查是否有非白名单链接
+        for url_match in url_matches:
+            url = url_match.group(0)
+            # 检查是否在白名单中
+            if not self._is_url_whitelisted(url, whitelist):
+                # 撤回消息
+                try:
+                    message_id = event.message_obj.message_id
+                    await event.bot.delete_msg(message_id=int(message_id))
+                    logger.info(f"已撤回群{gid}中用户{event.get_sender_id()}的链接消息")
+                except Exception:
+                    logger.exception(f"撤回群{gid}中链接消息失败")
+                return
+
+    def _is_url_whitelisted(self, url: str, whitelist: list[str]) -> bool:
+        """检查链接是否在白名单中"""
+        # 如果没有协议，添加 http:// 以便 urlparse 正确解析
+        url_to_parse = url if "://" in url else f"http://{url}"
+        
+        try:
+            parsed = urlparse(url_to_parse)
+            # 获取主机名（自动处理端口号）
+            hostname = parsed.hostname or ""
+            domain = hostname.lower()
+        except Exception:
+            # 解析失败时回退到简单处理
+            domain = url.lower().split("/")[0].split(":")[0]
+
+        if not domain:
+            return False
+
+        # 检查域名是否匹配白名单
+        for white_domain in whitelist:
+            white_domain_lower = white_domain.lower()
+            # 精确匹配或子域名匹配
+            if domain == white_domain_lower or domain.endswith("." + white_domain_lower):
+                return True
+        return False
