@@ -1,7 +1,7 @@
 {
   "divided_manage":{
     "description":"分群管理",
-    "type":"object",
+    "type":"bool",
     "hint":"开启后，每个群拥有一份配置，面板上设定的默认值仅作为初始值，每个群可在群内用命令单独修改。若关闭分群管理，则重载插件时将所有群的配置恢复成同样的默认值",
     "default": true
   },
