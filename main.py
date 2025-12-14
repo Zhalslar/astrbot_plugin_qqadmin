@@ -1,7 +1,7 @@
 import asyncio
 import random
-from pathlib import Path
 import re
+from pathlib import Path
 
 from astrbot import logger
 from astrbot.api.event import filter
@@ -45,11 +45,14 @@ class QQAdminPlugin(Star):
         self.ban_lexicon_path = Path(
             "data/plugins/astrbot_plugin_qqadmin/SensitiveLexicon.json"
         )
+        self.divided_manage = config["divided_manage"]
 
     async def initialize(self):
         # 数据库
         self.db = QQAdminDB(self.conf, self.db_path)
         await self.db.init()
+        if self.divided_manage:
+            await self.db.reset_to_default()
         # 实例化各个处理类
         self.normal = NormalHandle(self.conf)
         self.notice = NoticeHandle(self, self.plugin_data_dir)
@@ -222,7 +225,8 @@ class QQAdminPlugin(Star):
     @filter.event_message_type(EventMessageType.GROUP_MESSAGE)
     async def on_ban_words(self, event: AiocqhttpMessageEvent):
         """自动检测违禁词，撤回并禁言"""
-        await self.banpro.on_ban_words(event)
+        if not event.is_admin():
+            await self.banpro.on_ban_words(event)
 
     @filter.command("刷屏禁言")
     @perm_required(PermLevel.ADMIN, perm_key="spamming")
