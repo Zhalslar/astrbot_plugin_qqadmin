@@ -1,9 +1,9 @@
 {
-  "divided_manage":{
-    "description":"分群管理",
-    "type":"bool",
+  "divided_manage": {
+    "description": "分群管理",
+    "type": "bool",
     "obvious_hint": true,
-    "hint":"开启后，每个群拥有一份配置，面板上设定的默认值仅作为初始值，每个群可在群内用命令单独修改。若关闭，则重载插件时会将所有群的配置恢复成默认值",
+    "hint": "开启后，每个群拥有一份配置，面板上设定的默认值仅作为初始值，每个群可在群内用命令单独修改。若关闭，则重载插件时会将所有群的配置恢复成默认值",
     "default": true
   },
   "default": {
@@ -22,12 +22,22 @@
         "description": "进群等级门槛",
         "hint": "当申请人的QQ等级低于此值时，自动拒绝进群申请。设为0表示不启用此功能。可通过群内命令为当前群聊设置",
         "type": "int",
+        "slider": {
+          "min": 0,
+          "max": 100,
+          "step": 1
+        },
         "default": 8
       },
       "join_max_time": {
         "description": "进群最大尝试次数",
         "hint": "当用户申请进行的次数超过此值时，自动拒绝进群申请。可通过群内命令为当前群聊设置",
         "type": "int",
+        "slider": {
+          "min": 0,
+          "max": 10,
+          "step": 1
+        },
         "default": 3
       },
       "join_accept_words": {
@@ -76,6 +86,11 @@
         "description": "进群禁言时长",
         "hint": "单位为秒，新成员进群时，自动禁言该成员",
         "type": "int",
+        "slider": {
+          "min": 0,
+          "max": 300,
+          "step": 10
+        },
         "default": 0
       },
       "leave_notify": {
@@ -109,12 +124,22 @@
         "description": "触发禁词时的禁言时长",
         "hint": "触发违禁词则禁言发送者，单位：秒，设置为 0 表示不禁言",
         "type": "int",
-        "default": 300
+        "slider": {
+          "min": 0,
+          "max": 600,
+          "step": 60
+        },
+        "default": 360
       },
       "spamming_ban_time": {
         "description": "刷屏禁言时长（秒）",
         "hint": "当用户刷屏时触发禁言该用户，设置为 0 表示不启用此功能",
         "type": "int",
+        "slider": {
+          "min": 0,
+          "max": 600,
+          "step": 60
+        },
         "default": 0
       }
     }
@@ -140,12 +165,22 @@
         "description": "投票时长（秒）",
         "hint": "每轮投票时长到达此值时，开始结算，赞同票多于反对票时，禁言生效",
         "type": "int",
+        "slider": {
+          "min": 60,
+          "max": 300,
+          "step": 60
+        },
         "default": 120
       },
       "threshold": {
         "description": "投票通过所需票数",
         "hint": "赞同禁言的投票数到达此值时，禁言直接生效",
         "type": "int",
+        "slider": {
+          "min": 2,
+          "max": 10,
+          "step": 1
+        },
         "default": 3
       }
     }
@@ -154,12 +189,22 @@
     "description": "取名指令获取消息的默认轮数",
     "hint": "取名指令会爬取群聊的聊天记录进行分析，每轮爬200条消息，默认爬轮数10轮， 轮数可调",
     "type": "int",
+    "slider": {
+      "min": 1,
+      "max": 40,
+      "step": 1
+    },
     "default": 10
   },
   "level_threshold": {
     "description": "高等级成员阈值设置",
     "hint": "群等级高于此阈值的群成员，将被判定为“高等级成员”",
     "type": "int",
+    "slider": {
+      "min": 1,
+      "max": 100,
+      "step": 1
+    },
     "default": 50
   },
   "perms": {
