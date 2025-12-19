@@ -50,7 +50,7 @@ class QQAdminPlugin(Star):
         # 数据库
         self.db = QQAdminDB(self.conf, self.db_path)
         await self.db.init()
-        if not self.divided_manage:
+        if self.divided_manage:
             await self.db.reset_to_default()
         # 实例化各个处理类
         self.normal = NormalHandle(self.conf)

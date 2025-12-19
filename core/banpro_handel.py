@@ -130,8 +130,9 @@ class BanproHandle:
     ) -> bool:
         """检测违禁词并撤回消息"""
         gid = event.get_group_id()
+        msg = event.message_str.lower()
         for word in ban_words:
-            if word in event.message_str:
+            if word in msg:
                 # 撤回消息
                 try:
                     message_id = event.message_obj.message_id
