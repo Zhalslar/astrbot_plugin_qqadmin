@@ -1,6 +1,5 @@
 import os
 from datetime import datetime
-from pathlib import Path
 
 from aiohttp import ClientSession
 
@@ -166,7 +165,7 @@ def format_time(timestamp):
     return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d")
 
 
-async def download_file(url: str, save_path: Path) -> Path | None:
+async def download_file(url: str, save_path: str) -> str | None:
     """下载文件并保存到本地"""
     url = url.replace("https://", "http://")
     try:
