@@ -4,7 +4,7 @@
     "type": "bool",
     "obvious_hint": true,
     "hint": "开启后，每个群拥有一份配置，面板上设定的默认值仅作为初始值，每个群可在群内用命令单独修改。若关闭，则重载插件时会将所有群的配置恢复成默认值",
-    "default": true
+    "default": false
   },
   "default": {
     "description": "默认值配置",
@@ -16,7 +16,7 @@
         "description": "进群审核",
         "hint": "开启后，进群退群模块的功能才会在当前群聊生效，群主、群管理可用命令 “进群审核 开/关” 为当前群聊设置",
         "type": "bool",
-        "default": false
+        "default": true
       },
       "join_min_level": {
         "description": "进群等级门槛",
