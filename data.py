@@ -1,14 +1,12 @@
 import asyncio
 import json
-from pathlib import Path
 
 import aiosqlite
 
 from astrbot.api import logger
-from astrbot.core.config.astrbot_config import AstrBotConfig
 
 from .utils import parse_bool
-
+from .config import PluginConfig
 
 class QQAdminDB:
     """
@@ -39,11 +37,11 @@ class QQAdminDB:
 
     # ================================================================
 
-    def __init__(self, config: AstrBotConfig, db_path: Path):
-        self.db_path = db_path
+    def __init__(self, config: PluginConfig):
+        self.db_path = config.db_path
 
         # 默认字段（动态配置核心）
-        self.default_cfg: dict = config["default"]
+        self.default_cfg: dict = config.default
 
         self._conn = None
         self._cache = {}

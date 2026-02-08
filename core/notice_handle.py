@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import os
 import textwrap
 from datetime import datetime
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from astrbot.api import logger
@@ -12,14 +10,15 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
 )
 
 from ..utils import download_file, extract_image_url
+from ..config import PluginConfig
 
 if TYPE_CHECKING:
     from ..main import QQAdminPlugin
 
 class NoticeHandle:
-    def __init__(self, plugin: QQAdminPlugin, data_dir: Path):
+    def __init__(self, plugin: QQAdminPlugin, config: PluginConfig):
         self.plugin = plugin
-        self.data_dir = data_dir
+        self.cfg = config
 
     async def send_group_notice(self, event: AiocqhttpMessageEvent):
         """(引用图片)发布群公告 xxx"""
@@ -27,12 +26,12 @@ class NoticeHandle:
         if not content:
             await event.send(event.plain_result("你又不说要发什么群公告"))
             return
+        gid = event.get_group_id()
         image_path = None
         if image_url := extract_image_url(chain=event.get_messages()):
-            temp_path = os.path.join(
-                self.data_dir,
-                f"group_notice_image_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
-            )
+            img_name = f"{gid}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+            temp_path = self.cfg.group_notice_dir / img_name
+
             logger.debug("temp_path:", temp_path)
             image_path = await download_file(image_url, temp_path)
             if not image_path:

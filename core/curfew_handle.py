@@ -20,23 +20,22 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_platform_adapter import (
 )
 from astrbot.core.star.context import Context
 
+from ..config import PluginConfig
+
 
 class CurfewStore:
     """负责宵禁任务数据的统一持久化"""
 
-    def __init__(self, data_dir: Path):
-        self.path = data_dir / "curfew_data.json"
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        if not self.path.exists():
-            self.path.write_text("{}", encoding="utf-8")
+    def __init__(self, file: Path):
+        self.file = file
         # {"bot_id": {"group_id": {"start_time", "end_time"}}
         self.data: dict[str, dict[str, dict[str, str]]] = {}
 
     def load(self) -> dict[str, dict]:
-        if not self.path.exists():
+        if not self.file.exists():
             return {}
         try:
-            with self.path.open("r", encoding="utf-8") as f:
+            with self.file.open("r", encoding="utf-8") as f:
                 self.data = json.load(f)
         except Exception as e:
             logger.error(f"加载宵禁任务数据失败: {e}", exc_info=True)
@@ -45,7 +44,7 @@ class CurfewStore:
 
     def save(self):
         try:
-            with self.path.open("w", encoding="utf-8") as f:
+            with self.file.open("w", encoding="utf-8") as f:
                 json.dump(self.data, f, ensure_ascii=False, indent=2)
             logger.debug("宵禁任务数据已保存")
         except Exception as e:
@@ -232,7 +231,7 @@ class BotCurfewManager:
 class CurfewHandle:
     """多 Bot 宵禁处理类"""
 
-    def __init__(self, context: Context, data_dir: Path):
+    def __init__(self, context: Context, config: PluginConfig):
         self.context = context
         tz = self.context.get_config().get("timezone")
         self.timezone = (
@@ -240,8 +239,7 @@ class CurfewHandle:
         )
         self.scheduler = AsyncIOScheduler(timezone=self.timezone)
         self.scheduler.start()
-
-        self.store = CurfewStore(data_dir)
+        self.store = CurfewStore(config.curfew_file)
         self.store.load()
         self.curfew_managers: dict[str, BotCurfewManager] = {}
 

@@ -1,11 +1,10 @@
 import asyncio
 import random
 import re
-from pathlib import Path
 
 from astrbot import logger
 from astrbot.api.event import filter
-from astrbot.api.star import Context, Star, StarTools
+from astrbot.api.star import Context, Star
 from astrbot.core import AstrBotConfig
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
@@ -24,52 +23,40 @@ from .core import (
 )
 from .data import QQAdminDB
 from .permission import (
-    PermissionManager,
+    perm_manager,
     PermLevel,
     perm_required,
 )
 from .utils import ADMIN_HELP, print_logo
+from .config import PluginConfig
 
 
 class QQAdminPlugin(Star):
-    DB_VERSION = 3
 
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
         self.context = context
-        self.conf = config
-        self.admins_id: list[str] = context.get_config().get("admins_id", [])
-        self.plugin_data_dir = StarTools.get_data_dir("astrbot_plugin_qqadmin")
-        self.db_path = self.plugin_data_dir / f"qqadmin_data_v{self.DB_VERSION}.db"
-        self.ban_lexicon_path = Path(
-            "data/plugins/astrbot_plugin_qqadmin/SensitiveLexicon.json"
-        )
-        self.divided_manage = config["divided_manage"]
+        self.cfg = PluginConfig(config, context)
+        self.db = QQAdminDB(self.cfg)
+        self.normal = NormalHandle(self.cfg)
+        self.notice = NoticeHandle(self, self.cfg)
+        self.banpro = BanproHandle(self.cfg, self.db)
+        self.join = JoinHandle(self.cfg, self.db)
+        self.member = MemberHandle(self)
+        self.file = FileHandle(self.cfg)
+        self.curfew = CurfewHandle(self.context, self.cfg)
+        self.llm = LLMHandle(self.context, self.cfg)
 
     async def initialize(self):
-        # 数据库
-        self.db = QQAdminDB(self.conf, self.db_path)
         await self.db.init()
-        if not self.divided_manage:
+
+        if not self.cfg.divided_manage:
             await self.db.reset_to_default()
-        # 实例化各个处理类
-        self.normal = NormalHandle(self.conf)
-        self.notice = NoticeHandle(self, self.plugin_data_dir)
-        self.banpro = BanproHandle(self.conf, self.db, self.ban_lexicon_path)
-        self.join = JoinHandle(self.conf, self.db, self.admins_id)
-        self.member = MemberHandle(self)
-        self.file = FileHandle(self.plugin_data_dir)
-        self.curfew = CurfewHandle(self.context, self.plugin_data_dir)
-        self.llm = LLMHandle(self.context, self.conf)
+
         asyncio.create_task(self.curfew.initialize())
 
-        # 初始化权限管理器
-        PermissionManager.get_instance(
-            superusers=self.admins_id,
-            perms=self.conf["perms"],
-            level_threshold=self.conf["level_threshold"],
-        )
-        # 概率打印LOGO（qwq）
+        perm_manager.lazy_init(self.cfg)
+
         if random.random() < 0.01:
             print_logo()
 

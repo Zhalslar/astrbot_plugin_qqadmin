@@ -1,31 +1,28 @@
 import asyncio
 import json
-import random
 import time
 from collections import defaultdict, deque
-from pathlib import Path
 
 from astrbot.api import logger
-from astrbot.core.config.astrbot_config import AstrBotConfig
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
 
 from ..data import QQAdminDB
 from ..utils import get_ats, get_nickname, parse_bool
+from ..config import PluginConfig
 
 
 class BanproHandle:
-    def __init__(self, config: AstrBotConfig, db: QQAdminDB, ban_lexicon_path: Path):
-        self.conf = config
+    def __init__(self, config: PluginConfig, db: QQAdminDB):
+        self.cfg = config
         self.db = db
-        self.builtin_ban_words = json.loads(
-            ban_lexicon_path.read_text(encoding="utf-8")
-        )["words"]
-        self.spamming_count = 5
-        self.spamming_interval = 0.5
+        self.builtin_ban_data = json.loads(
+            config.ban_lexicon_path.read_text(encoding="utf-8")
+        )
+        self.builtin_ban_words = self.builtin_ban_data["words"]
         self.msg_timestamps: dict[str, dict[str, deque[float]]] = defaultdict(
-            lambda: defaultdict(lambda: deque(maxlen=self.spamming_count))
+            lambda: defaultdict(lambda: deque(maxlen=self.cfg.spamming_count))
         )
         self.last_banned_time: dict[str, dict[str, float]] = defaultdict(
             lambda: defaultdict(float)
@@ -116,7 +113,7 @@ class BanproHandle:
         gid = event.get_group_id()
 
         # 检测自定义的违禁词
-        if ban_words:= await self.db.get(gid, "custom_ban_words", []):
+        if ban_words := await self.db.get(gid, "custom_ban_words", []):
             if await self.check_ban_words(event, ban_words):
                 return
 
@@ -191,11 +188,11 @@ class BanproHandle:
 
         timestamps = self.msg_timestamps[group_id][sender_id]
         timestamps.append(now)
-        count = self.spamming_count
+        count = self.cfg.spamming_count
         if len(timestamps) >= count:
             recent = list(timestamps)[-count:]
             intervals = [recent[i + 1] - recent[i] for i in range(count - 1)]
-            if all(interval < self.spamming_interval for interval in intervals):
+            if all(interval < self.cfg.spamming_interval for interval in intervals):
                 # 提前写入禁止标记，防止并发重复禁
                 self.last_banned_time[group_id][sender_id] = now
 
@@ -221,35 +218,35 @@ class BanproHandle:
         if not target_ids:
             return
         target_id = target_ids[0]
-        if not ban_time or not isinstance(ban_time, int):
-            ban_time = random.randint(
-                *map(int, self.conf["random_ban_time"].split("~"))
-            )
+        ban_time = self.cfg.get_ban_time(ban_time)
         group_id = event.get_group_id()
 
         if group_id in self.vote_cache:
             await event.send(event.plain_result("群内已有正在进行的禁言投票"))
             return
 
-        expire_at = time.time() + self.conf["vote_ban"]["ttl"]
+        ttl = self.cfg.vote_ban.ttl
+        threshold = self.cfg.vote_ban.threshold
+
+        expire_at = time.time() + ttl
         self.vote_cache[group_id] = {
             "target": target_id,
             "votes": {},
             "ban_time": ban_time,
             "expire": expire_at,
-            "threshold": self.conf["vote_ban"]["threshold"],
+            "threshold": threshold,
         }
 
         nickname = await get_nickname(event, target_id)
         await event.send(
             event.plain_result(
-                f"已发起对 {nickname} 的禁言投票(禁言{ban_time}秒)，输入“赞同禁言/反对禁言”进行表态，{self.conf['vote_ban']['ttl']}秒后结算"
+                f"已发起对 {nickname} 的禁言投票(禁言{ban_time}秒)，输入“赞同禁言/反对禁言”进行表态，{ttl}秒后结算"
             )
         )
 
         # ===== 新增：定时结算逻辑 =====
         async def settle_vote():
-            await asyncio.sleep(self.conf["vote_ban"]["ttl"])
+            await asyncio.sleep(ttl)
             record = self.vote_cache.get(group_id)
             if not record:
                 return  # 已被提前结算

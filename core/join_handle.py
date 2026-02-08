@@ -1,31 +1,29 @@
 from aiocqhttp import CQHttp
 
 from astrbot.api import logger
-from astrbot.core.config.astrbot_config import AstrBotConfig
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
 
 from ..data import QQAdminDB
 from ..utils import get_nickname, get_reply_message_str, parse_bool
+from ..config import PluginConfig
 
 
 class JoinHandle:
-    def __init__(self, config: AstrBotConfig, db: QQAdminDB, admin_ids: list[str]):
-        self.conf = config
-        self.admin_ids: list[str] = admin_ids
+    def __init__(self, config: PluginConfig, db: QQAdminDB):
+        self.cfg = config
         self.db = db
         self._fail: dict[str, int] = {}
 
     async def _send_admin(self, client: CQHttp, message: str):
-        for admin_id in self.admin_ids:
-            if admin_id.isdigit():
-                try:
-                    await client.send_private_msg(
-                        user_id=int(admin_id), message=message
-                    )
-                except Exception as e:
-                    logger.error(f"无法发送消息给bot管理员：{e}")
+        for admin_id in self.cfg.admins_id:
+            try:
+                await client.send_private_msg(
+                    user_id=int(admin_id), message=message
+                )
+            except Exception as e:
+                logger.error(f"无法发送消息给bot管理员：{e}")
 
     # -----------修改配置-----------------
 
@@ -307,7 +305,7 @@ class JoinHandle:
             if approve_msg:
                 notice += f"\n\n{approve_msg}"
 
-            if self.conf["admin_audit"]:
+            if self.cfg.admin_audit:
                 await self._send_admin(client, notice)
             else:
                 await event.send(event.plain_result(notice))

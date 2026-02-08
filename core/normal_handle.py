@@ -1,32 +1,26 @@
-
 import asyncio
 import random
 
-from astrbot.core import AstrBotConfig
 from astrbot.core.message.components import At, Plain, Reply
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
 
 from ..utils import BAN_ME_QUOTES, extract_image_url, get_ats, get_nickname
+from ..config import PluginConfig
 
 
 class NormalHandle:
-    def __init__(self, config: AstrBotConfig):
-        self.conf = config
+    def __init__(self, config: PluginConfig):
+        self.cfg = config
 
-    async def set_group_ban(self, event: AiocqhttpMessageEvent, ban_time=None):
+    async def set_group_ban(
+        self,
+        event: AiocqhttpMessageEvent,
+        ban_time: int | None = None,
+    ):
         """禁言 60 @user"""
-        max_ban_time = 2592000  # 一个月的秒数（30天）
-        if not ban_time or not isinstance(ban_time, int):
-            # 如果没有指定禁言时间或不是整数，则随机生成
-            random_ban_time_range = list(map(int, self.conf["random_ban_time"].split("~")))
-            # 确保随机范围的最大值不超过一个月
-            random_ban_time_range[1] = min(random_ban_time_range[1], max_ban_time)
-            ban_time = random.randint(*random_ban_time_range)
-        else:
-            # 如果指定了禁言时间，确保不超过一个月
-            ban_time = min(ban_time, max_ban_time)
+        ban_time = self.cfg.get_ban_time(ban_time)
 
         for tid in get_ats(event):
             try:
@@ -43,10 +37,7 @@ class NormalHandle:
         self, event: AiocqhttpMessageEvent, ban_time: int | None = None
     ):
         """禁我 60"""
-        if not ban_time or not isinstance(ban_time, int):
-            ban_time = random.randint(
-                *map(int, self.conf["random_ban_time"].split("~"))
-            )
+        ban_time = self.cfg.get_ban_time(ban_time)
         try:
             await event.bot.set_group_ban(
                 group_id=int(event.get_group_id()),
@@ -88,7 +79,11 @@ class NormalHandle:
         tids = get_ats(event) or [event.get_sender_id()]
         for tid in tids:
             target_name = await get_nickname(event, user_id=tid)
-            msg = f"已修改{target_name}的群昵称为【{target_card}】" if target_card else f"已清除{target_name}的群昵称"
+            msg = (
+                f"已修改{target_name}的群昵称为【{target_card}】"
+                if target_card
+                else f"已清除{target_name}的群昵称"
+            )
             await event.send(event.plain_result(msg))
             await event.bot.set_group_card(
                 group_id=int(event.get_group_id()),
@@ -101,7 +96,11 @@ class NormalHandle:
     ):
         """改我 xxx"""
         target_card = str(target_card) if target_card else ""
-        msg = f"已修改你的群昵称为【{target_card}】" if target_card else "已清除你的群昵称"
+        msg = (
+            f"已修改你的群昵称为【{target_card}】"
+            if target_card
+            else "已清除你的群昵称"
+        )
         await event.send(event.plain_result(msg))
         await event.bot.set_group_card(
             group_id=int(event.get_group_id()),
@@ -117,7 +116,11 @@ class NormalHandle:
         tids = get_ats(event) or [event.get_sender_id()]
         for tid in tids:
             target_name = await get_nickname(event, user_id=tid)
-            msg = f"已修改{target_name}的头衔为【{new_title}】" if new_title else f"已清除{target_name}的头衔"
+            msg = (
+                f"已修改{target_name}的头衔为【{new_title}】"
+                if new_title
+                else f"已清除{target_name}的头衔"
+            )
             await event.send(event.plain_result(msg))
             await event.bot.set_group_special_title(
                 group_id=int(event.get_group_id()),
@@ -125,7 +128,6 @@ class NormalHandle:
                 special_title=new_title,
                 duration=-1,
             )
-
 
     async def set_group_special_title_me(
         self, event: AiocqhttpMessageEvent, new_title: str | int | None = None
@@ -161,7 +163,9 @@ class NormalHandle:
                 user_id=int(tid),
                 reject_add_request=True,
             )
-            await event.send(event.plain_result(f"已将【{tid}-{target_name}】踢出本群并拉黑!"))
+            await event.send(
+                event.plain_result(f"已将【{tid}-{target_name}】踢出本群并拉黑!")
+            )
 
     async def set_group_admin(self, event: AiocqhttpMessageEvent):
         """设置管理员@user"""
@@ -217,7 +221,6 @@ class NormalHandle:
             file=image_url,
         )
         await event.send(event.plain_result("群头像更新啦>v<"))
-
 
     async def set_group_name(
         self, event: AiocqhttpMessageEvent, group_name: str | int | None = None
@@ -280,4 +283,6 @@ class NormalHandle:
             tasks = [try_delete(msg) for msg in messages]
             await asyncio.gather(*tasks)
 
-            await event.send(event.plain_result(f"已从{count}条消息中撤回{delete_count}条"))
+            await event.send(
+                event.plain_result(f"已从{count}条消息中撤回{delete_count}条")
+            )

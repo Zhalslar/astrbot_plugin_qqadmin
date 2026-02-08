@@ -1,7 +1,6 @@
 import os
 import re
 from datetime import datetime
-from pathlib import Path
 
 from astrbot.api import logger
 from astrbot.core.message.components import File, Image, Reply, Video
@@ -10,11 +9,12 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
 )
 
 from ..utils import download_file
+from ..config import PluginConfig
 
 
 class FileHandle:
-    def __init__(self, data_dir: Path):
-        self.data_dir = data_dir
+    def __init__(self, config: PluginConfig):
+        self.data_dir = config.file_dir
 
     async def _parse_path(
         self, event: AiocqhttpMessageEvent, path: str
@@ -169,7 +169,7 @@ class FileHandle:
             if url := getattr(seg, "url", None) or getattr(seg, "file", None):
                 logger.info(f"正在从URL下载文件：{url}")
                 file_path = self.data_dir / file_name
-                await download_file(url, str(file_path))
+                await download_file(url, file_path)
                 if os.path.exists(file_path):
                     return file_path
                 logger.error(f"下载文件失败：{url}")
