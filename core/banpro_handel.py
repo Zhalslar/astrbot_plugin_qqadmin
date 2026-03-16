@@ -8,9 +8,9 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
 
+from ..config import PluginConfig
 from ..data import QQAdminDB
 from ..utils import get_ats, get_nickname, parse_bool
-from ..config import PluginConfig
 
 
 class BanproHandle:

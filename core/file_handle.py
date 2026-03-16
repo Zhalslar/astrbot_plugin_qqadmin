@@ -8,8 +8,8 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
 
-from ..utils import download_file
 from ..config import PluginConfig
+from ..utils import download_file
 
 
 class FileHandle:

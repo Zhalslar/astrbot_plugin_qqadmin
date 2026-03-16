@@ -6,8 +6,8 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
 
-from ..utils import BAN_ME_QUOTES, extract_image_url, get_ats, get_nickname
 from ..config import PluginConfig
+from ..utils import BAN_ME_QUOTES, extract_image_url, get_ats, get_nickname
 
 
 class NormalHandle:

@@ -11,6 +11,7 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
 )
 from astrbot.core.star.filter.event_message_type import EventMessageType
 
+from .config import PluginConfig
 from .core import (
     BanproHandle,
     CurfewHandle,
@@ -23,12 +24,11 @@ from .core import (
 )
 from .data import QQAdminDB
 from .permission import (
-    perm_manager,
     PermLevel,
+    perm_manager,
     perm_required,
 )
 from .utils import ADMIN_HELP, print_logo
-from .config import PluginConfig
 
 
 class QQAdminPlugin(Star):
@@ -374,7 +374,7 @@ class QQAdminPlugin(Star):
         await self.member.clear_group_member(event, inactive_days, under_level)
 
     @filter.command("上传群文件", desc="上传群文件 <文件夹名/文件名 | 文件名>")
-    @perm_required(PermLevel.ADMIN)
+    @perm_required(PermLevel.MEMBER)
     async def upload_group_file(
         self,
         event: AiocqhttpMessageEvent,
@@ -383,7 +383,7 @@ class QQAdminPlugin(Star):
         await self.file.upload_group_file(event, str(path))
 
     @filter.command("删除群文件", desc="删除群文件 <文件夹名/序号> <文件名/序号>")
-    @perm_required(PermLevel.ADMIN)
+    @perm_required(PermLevel.MEMBER)
     async def delete_group_file(
         self,
         event: AiocqhttpMessageEvent,

@@ -8,8 +8,8 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
 
-from ..utils import get_ats, get_nickname
 from ..config import PluginConfig
+from ..utils import get_ats, get_nickname
 
 
 class LLMHandle:

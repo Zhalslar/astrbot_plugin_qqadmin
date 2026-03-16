@@ -5,9 +5,9 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
 
+from ..config import PluginConfig
 from ..data import QQAdminDB
 from ..utils import get_nickname, get_reply_message_str, parse_bool
-from ..config import PluginConfig
 
 
 class JoinHandle:
@@ -288,6 +288,8 @@ class JoinHandle:
                         approve=approve,
                         reason="" if approve else reason,
                     )
+                    if not approve and reason == "黑名单用户":
+                        return
                     approve_msg = f"自动{'批准' if approve else '驳回'}：{reason}"
                 except Exception as e:
                     logger.warning(f"set_group_add_request failed: {e}")

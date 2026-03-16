@@ -9,8 +9,8 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
 
-from ..utils import download_file, extract_image_url
 from ..config import PluginConfig
+from ..utils import download_file, extract_image_url
 
 if TYPE_CHECKING:
     from ..main import QQAdminPlugin

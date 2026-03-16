@@ -9,8 +9,8 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
 
-from .utils import get_ats
 from .config import PluginConfig
+from .utils import get_ats
 
 
 class PermLevel(IntEnum):
