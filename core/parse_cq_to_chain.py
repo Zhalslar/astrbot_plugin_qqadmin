@@ -1,6 +1,6 @@
 import re
 import os
-# from astrbot.core.message.components import Plain, At, Image
+from astrbot.core.message.components import Plain, At, Image
 
 def parse_cq_to_chain(text: str) -> list:
     """增强版 CQ 码解析，支持本地绝对路径图片"""
