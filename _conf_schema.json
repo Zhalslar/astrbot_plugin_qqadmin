@@ -78,7 +78,7 @@
       },
       "join_welcome": {
         "description": "进群欢迎词",
-        "hint": "发给新群友的欢迎词, 支持变量: {nickname}, 示例：欢迎{nickname}加入群聊",
+        "hint": "发给新群友的欢迎词, 支持@和图片cq码，支持变量: {nickname}、{qq}, 示例：[CQ:at,qq={qq}] 欢迎{nickname}加入群聊",
         "type": "string",
         "default": ""
       },
