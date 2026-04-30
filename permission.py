@@ -129,12 +129,14 @@ def perm_required(
     bot_perm: PermLevel = PermLevel.ADMIN,
     perm_key: str | None = None,
     check_at: bool = True,
+    allow_private: bool = False,
 ):
     """
     权限检查装饰器。
     :param perm_key: 可选。用户执行命令所需的最低权限键名，默认使用被装饰函数的函数名。
     :param bot_perm: Bot 执行此命令所需的最低权限等级。
     :param check_at: 是否检查“是否有权对被@者实施操作”。
+    :param allow_private: 是否允许在私信中执行。
     """
 
     def decorator(
@@ -154,8 +156,17 @@ def perm_required(
             if event.platform_meta.name != "aiocqhttp":
                 return
 
-            # 仅限群聊
+            # 私信处理
             if event.is_private_chat():
+                if not allow_private:
+                    return
+                if inspect.isasyncgenfunction(func):
+                    async for item in func(plugin_instance, event, *args, **kwargs):
+                        yield item
+                else:
+                    await cast(
+                        Awaitable[Any], func(plugin_instance, event, *args, **kwargs)
+                    )
                 return
 
             # 权限管理未初始化
