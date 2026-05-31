@@ -263,13 +263,13 @@ class JoinHandle:
             # 4.5. TOTP 码验证（多窗口 + 一次性防重放）
             secret = await self._ensure_totp_secret()
             if secret:
-                window = await self.db.get(gid, "join_totp_window", 1)
+                window = self.cfg.default.get("join_totp_window", 1)
+                # 限制 window 范围在 0-3 之间，防止过大窗口造成性能问题或过于宽松
+                window = max(0, min(window, 3))
                 now = int(time.time())
                 totp = pyotp.TOTP(secret, interval=30)
-                valid_codes = set()
-                for offset in range(-window, window + 1):
-                    valid_codes.add(totp.at(now + offset * 30))
-                if comment.strip() in valid_codes:
+                # 使用 pyotp 内置的 verify 方法进行多窗口验证
+                if totp.verify(comment.strip(), for_time=now, valid_window=window):
                     # 一次性：立即更换密钥
                     new_secret = pyotp.random_base32()
                     self.cfg.default["join_totp_secret"] = new_secret

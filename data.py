@@ -30,7 +30,6 @@ class QQAdminDB:
         "leave_notify": "主动退群通知",
         "leave_block": "主动退群拉黑",
         "join_totp_secret": "TOTP密钥",
-        "join_totp_window": "TOTP窗口",
         "join_totp_whitelist": "TOTP白名单",
         "builtin_ban": "启用内置禁词",
         "custom_ban_words": "自定义违禁词",
