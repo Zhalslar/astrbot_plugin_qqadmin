@@ -8,3 +8,6 @@ repo: https://github.com/Zhalslar/astrbot_plugin_qqadmin
 support_platforms:
   - aiocqhttp
 astrbot_version: ">=4.24.2"
+
+dependencies:
+  - pyotp

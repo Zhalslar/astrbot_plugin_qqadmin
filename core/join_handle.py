@@ -8,6 +8,8 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
 from ..config import PluginConfig
 from ..data import QQAdminDB
 from ..utils import get_nickname, get_reply_message_str, parse_bool
+import pyotp
+import time
 
 
 class JoinHandle:
@@ -186,6 +188,39 @@ class JoinHandle:
             status = await self.db.get(gid, "leave_block")
             await event.send(event.plain_result(f"本群退群拉黑：{status}"))
 
+    async def _ensure_totp_secret(self) -> str:
+        """确保 TOTP 密钥存在，不存在则自动生成并持久化"""
+        secret = self.cfg.default.get("join_totp_secret", "")
+        if not secret:
+            secret = pyotp.random_base32()
+            self.cfg.default["join_totp_secret"] = secret
+            try:
+                self.cfg.save_config()
+            except (OSError, RuntimeError):
+                logger.warning("TOTP 密钥自动生成后保存配置失败")
+        return secret
+
+    async def handle_get_totp_code(self, event: AiocqhttpMessageEvent):
+        """私聊获取当前 TOTP 入群码"""
+        # 1. 仅私聊
+        if not event.is_private_chat():
+            return
+        # 2. 白名单检查
+        uid = event.get_sender_id()
+        whitelist = self.cfg.default.get("join_totp_whitelist", [])
+        if str(uid) not in map(str, whitelist):
+            return
+        # 3. 确保密钥存在（自动生成）
+        secret = await self._ensure_totp_secret()
+        # 4. 生成当前码 + 剩余时间
+        totp = pyotp.TOTP(secret, interval=30)
+        now = int(time.time())
+        code = totp.now()
+        remaining = 30 - (now % 30)
+        await event.send(event.plain_result(
+            f"当前入群码：{code}\n剩余有效时间：{remaining} 秒"
+        ))
+
     # ---------辅助函数-----------------
     async def should_approve(
         self,
@@ -224,6 +259,25 @@ class JoinHandle:
             akws = await self.db.get(gid, "join_accept_words", [])
             if akws and any(ak.lower() in lower_comment for ak in akws):
                 return True, "命中进群白词"
+
+            # 4.5. TOTP 码验证（多窗口 + 一次性防重放）
+            secret = await self._ensure_totp_secret()
+            if secret:
+                window = await self.db.get(gid, "join_totp_window", 1)
+                now = int(time.time())
+                totp = pyotp.TOTP(secret, interval=30)
+                valid_codes = set()
+                for offset in range(-window, window + 1):
+                    valid_codes.add(totp.at(now + offset * 30))
+                if comment.strip() in valid_codes:
+                    # 一次性：立即更换密钥
+                    new_secret = pyotp.random_base32()
+                    self.cfg.default["join_totp_secret"] = new_secret
+                    try:
+                        self.cfg.save_config()
+                    except (OSError, RuntimeError):
+                        logger.warning("TOTP 密钥重置后保存配置失败")
+                    return True, "TOTP入群码验证通过"
 
         # 5.最大失败次数（考虑到只是防爆破，存内存里足矣，重启清零）
         max_fail = await self.db.get(gid, "join_max_time", 3)

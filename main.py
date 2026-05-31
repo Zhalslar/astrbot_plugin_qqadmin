@@ -284,6 +284,11 @@ class QQAdminPlugin(Star):
         "设置/查看进群黑名单关键词（空格隔开，无参数表示查看）"
         await self.join.handle_reject_words(event)
 
+    @filter.command("获取入群码")
+    async def handle_get_totp_code(self, event: AiocqhttpMessageEvent):
+        """私聊获取 TOTP 入群码（需在白名单内）"""
+        await self.join.handle_get_totp_code(event)
+
     @filter.command("未命中驳回", desc="未命中白词自动驳回 开/关")
     @perm_required(PermLevel.ADMIN, perm_key="join")
     async def handle_no_match_reject(

@@ -134,6 +134,29 @@
           "step": 60
         },
         "default": 0
+      },
+      "join_totp_secret": {
+        "description": "TOTP 共享密钥",
+        "hint": "⚠️ 此为敏感信息，请确保配置文件权限安全。留空则自动随机生成。Base32 密钥，用于 TOTP 入群验证码的生成与校验",
+        "type": "string",
+        "default": ""
+      },
+      "join_totp_window": {
+        "description": "TOTP 验证窗口偏移量",
+        "hint": "前后各扩展 N 个 30s 窗口，总验证窗口数为 2N+1",
+        "type": "int",
+        "slider": {
+          "min": 0,
+          "max": 3,
+          "step": 1
+        },
+        "default": 1
+      },
+      "join_totp_whitelist": {
+        "description": "TOTP 入群码白名单",
+        "hint": "允许在私聊中获取 TOTP 入群码的 QQ 号列表",
+        "type": "list",
+        "default": []
       }
     }
   },
