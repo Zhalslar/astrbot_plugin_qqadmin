@@ -111,14 +111,21 @@ class PermissionManager:
     ) -> str | None:
         user_level = await self.get_perm_level(event, user_id=event.get_sender_id())
 
-        # 未指定权限，则默认至少需要管理员权限
+        # 未指定权限，则优先使用默认配置里的权限项，最后再回退到管理员。
         group_config = (
             self.db.get_group_snapshot(event.get_group_id())
             if self.db is not None
             else {"perms": self.cfg.perms if self.cfg else {}}
         )
         perms = group_config.get("perms", {})
-        required_level = PermLevel.from_str(str(perms.get(perm_key, "管理员")))
+        default_required = "管理员"
+        if self.db is not None and isinstance(self.db.default_cfg.get("perms"), dict):
+            default_required = self.db.default_cfg["perms"].get(
+                perm_key, default_required
+            )
+        elif self.cfg is not None:
+            default_required = self.cfg.perms.get(perm_key, default_required)
+        required_level = PermLevel.from_str(str(perms.get(perm_key, default_required)))
 
         if user_level > required_level:
             return f"你没{required_level}权限"

@@ -33,6 +33,7 @@ class QQAdminDB:
         "custom_ban_words": "自定义违禁词",
         "word_ban_time": "禁词禁言时长",
         "spamming_ban_time": "刷屏禁言时长",
+        "mention_roles": "身份组",
     }
 
     REVERSE_FIELD_MAP = {v: k for k, v in FIELD_MAP.items()}
@@ -159,6 +160,11 @@ class QQAdminDB:
         for key, value in self.default_cfg.items():
             if key not in data:
                 data[key] = copy.deepcopy(value)
+        if isinstance(data.get("perms"), dict) and isinstance(
+            self.default_cfg.get("perms"), dict
+        ):
+            for key, value in self.default_cfg["perms"].items():
+                data["perms"].setdefault(key, copy.deepcopy(value))
         return data
 
     # ============================== API ==============================
@@ -177,6 +183,13 @@ class QQAdminDB:
             if k not in data:
                 data[k] = json.loads(json.dumps(v))
                 changed = True
+        if isinstance(data.get("perms"), dict) and isinstance(
+            self.default_cfg.get("perms"), dict
+        ):
+            for key, value in self.default_cfg["perms"].items():
+                if key not in data["perms"]:
+                    data["perms"][key] = json.loads(json.dumps(value))
+                    changed = True
 
         if data.get(self.FOLLOW_DEFAULT_MARKER) is not False:
             data[self.FOLLOW_DEFAULT_MARKER] = False
@@ -263,6 +276,8 @@ class QQAdminDB:
         lines = []
 
         for eng_key, value in data.items():
+            if eng_key == "mention_roles":
+                continue
             cn_key = self.FIELD_MAP.get(eng_key, eng_key)
 
             # 列表字段 => 用空格分隔
