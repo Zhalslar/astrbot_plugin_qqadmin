@@ -16,6 +16,7 @@ from .core import (
     FileHandle,
     JoinHandle,
     MemberHandle,
+    MentionRoleHandle,
     NormalHandle,
     NoticeHandle,
     RecallHandle,
@@ -45,6 +46,7 @@ class QQAdminPlugin(Star):
         self.banpro = BanproHandle(self.cfg, self.db)
         self.join = JoinHandle(self.cfg, self.db)
         self.member = MemberHandle(self)
+        self.mention_role = MentionRoleHandle(self.db)
         self.file = FileHandle(self.cfg)
         self.curfew = CurfewHandle(self.context, self.cfg)
         self.web = QQAdminWebController(context, self.cfg, self.db, self.group_cache)
@@ -99,6 +101,70 @@ class QQAdminPlugin(Star):
         else:
             await self.db.reset_to_default(str(gid))
             yield event.plain_result("已重置本群的群管配置")
+
+    @filter.command("身份组创建")
+    @perm_required(PermLevel.ADMIN, perm_key="mention_role_manage", check_at=False)
+    async def create_mention_role(
+        self, event: AiocqhttpMessageEvent, role_name: str | int = ""
+    ):
+        """身份组创建 <组名>"""
+        if result := await self.mention_role.create_role(event, role_name):
+            yield event.plain_result(result)
+
+    @filter.command("身份组删除", alias={"身份组删组"})
+    @perm_required(PermLevel.ADMIN, perm_key="mention_role_manage", check_at=False)
+    async def delete_mention_role(
+        self, event: AiocqhttpMessageEvent, role_name: str | int = ""
+    ):
+        """身份组删除 <组名>"""
+        if result := await self.mention_role.delete_role(event, role_name):
+            yield event.plain_result(result)
+
+    @filter.command("身份组加")
+    @perm_required(PermLevel.ADMIN, perm_key="mention_role_manage", check_at=False)
+    async def add_mention_role_members(self, event: AiocqhttpMessageEvent):
+        """身份组加 <组名> @群友..."""
+        if result := await self.mention_role.add_members(event):
+            yield event.plain_result(result)
+
+    @filter.command("身份组删")
+    @perm_required(PermLevel.ADMIN, perm_key="mention_role_manage", check_at=False)
+    async def remove_mention_role_members(self, event: AiocqhttpMessageEvent):
+        """身份组删 <组名> @群友..."""
+        if result := await self.mention_role.remove_members(event):
+            yield event.plain_result(result)
+
+    @filter.command("身份组列表", alias={"身份组"})
+    @perm_required(PermLevel.MEMBER, perm_key="mention_role_list", check_at=False)
+    async def list_mention_roles(
+        self, event: AiocqhttpMessageEvent, role_name: str | int = ""
+    ):
+        """身份组列表 <组名 | 留空>"""
+        if result := await self.mention_role.list_roles(event, role_name):
+            yield event.plain_result(result)
+
+    @filter.command("呼叫", alias={"召唤", "呼叫身份组"})
+    async def call_mention_role(self, event: AiocqhttpMessageEvent):
+        """呼叫 <组名> <附加消息>"""
+        if event.platform_meta.name != "aiocqhttp" or event.is_private_chat():
+            return
+        if not perm_manager._initialized:
+            yield event.plain_result("内部错误：权限系统未正确加载")
+            event.stop_event()
+            return
+        role_name = self.mention_role.get_call_role_name(event)
+        if not await self.mention_role.is_sender_in_role(event, role_name):
+            if result := await perm_manager.perm_block(
+                event,
+                bot_perm=PermLevel.MEMBER,
+                perm_key="mention_role_call",
+                check_at=False,
+            ):
+                yield event.plain_result(result)
+                event.stop_event()
+                return
+        if result := await self.mention_role.call_role(event):
+            yield event.plain_result(result)
 
     @filter.command("禁言")
     @perm_required(PermLevel.ADMIN, perm_key="set_group_card")

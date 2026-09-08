@@ -551,6 +551,56 @@
         ],
         "default": "管理员"
       },
+      "mention_role_manage": {
+        "description": "身份组管理",
+        "hint": "包括：身份组创建、身份组删除、身份组加、身份组删",
+        "type": "string",
+        "options": [
+          "超管",
+          "群主",
+          "管理员",
+          "高等级成员",
+          "成员"
+        ],
+        "default": "管理员"
+      },
+      "mention_role_list": {
+        "description": "查看身份组",
+        "type": "string",
+        "options": [
+          "超管",
+          "群主",
+          "管理员",
+          "高等级成员",
+          "成员"
+        ],
+        "default": "成员"
+      },
+      "mention_role_call_entry": {
+        "description": "呼叫身份组入口",
+        "hint": "建议保持为成员；实际呼叫时，身份组成员可呼叫自己的组，非组员再按“呼叫身份组”权限判断",
+        "type": "string",
+        "options": [
+          "超管",
+          "群主",
+          "管理员",
+          "高等级成员",
+          "成员"
+        ],
+        "default": "成员"
+      },
+      "mention_role_call": {
+        "description": "呼叫身份组",
+        "type": "string",
+        "options": [
+          "超管",
+          "群主",
+          "管理员",
+          "高等级成员",
+          "成员"
+        ],
+        "default": "高等级成员"
+      },
       "upload_group_file": {
         "description": "上传群文件",
         "type": "string",
