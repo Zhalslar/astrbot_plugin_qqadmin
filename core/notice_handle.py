@@ -32,7 +32,7 @@ class NoticeHandle:
         if not content:
             return "未指定群公告内容"
         gid = event.get_group_id()
-        image_path = ""
+        kwargs = {"group_id": int(gid), "content": content}
         if image_url := (image_url or extract_image_url(chain=event.get_messages())):
             img_name = f"{gid}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
             temp_path = self.cfg.group_notice_dir / img_name
@@ -41,13 +41,9 @@ class NoticeHandle:
             image_path = await download_file(image_url, temp_path)
             if not image_path:
                 return "图片获取失败"
+            kwargs["image"] = str(image_path)
 
-            await event.bot._send_group_notice(
-                group_id=int(event.get_group_id()),
-                content=content,
-                image=str(image_path),
-            )
-        event.stop_event()
+        await event.bot._send_group_notice(**kwargs)
         return "群公告已发布"
 
     async def get_group_notice(self, event: AiocqhttpMessageEvent):
