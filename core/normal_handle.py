@@ -108,15 +108,17 @@ class NormalHandle:
     async def set_group_block(
         self, event: AiocqhttpMessageEvent, target_id: str | int = ""
     ):
+        gid = event.get_group_id()
         tids = [target_id] if target_id else get_ats(event)
         results = []
         for tid in tids:
             target_name = await get_nickname(event, user_id=tid)
             await event.bot.set_group_kick(
-                group_id=int(event.get_group_id()),
+                group_id=int(gid),
                 user_id=int(tid),
                 reject_add_request=True,
             )
+            await self.db.add(gid, "block_ids", str(tid))
             results.append(f"已将【{tid}-{target_name}】踢出本群并拉黑!")
         return "\n".join(results) if results else "未指定要拉黑的用户"
 
