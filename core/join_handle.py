@@ -1,6 +1,7 @@
 from aiocqhttp import CQHttp
 
 from astrbot.api import logger
+from astrbot.core.message.components import At, Plain
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
@@ -333,7 +334,9 @@ class JoinHandle:
             if join_welcome:
                 nickname = await get_nickname(event, uid)
                 welcome = join_welcome.format(nickname=nickname)
-                await event.send(event.plain_result(welcome))
+                await event.send(
+                    event.chain_result([At(qq=uid), Plain(f" {welcome}")])
+                )
             # 进群禁言
             join_ban_time = await self.db.get(gid, "join_ban_time")
             if join_ban_time > 0:
