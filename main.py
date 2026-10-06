@@ -474,14 +474,14 @@ class QQAdminPlugin(Star):
         self,
         event: AiocqhttpMessageEvent,
         user_id: int,
-        duration: int,
+        duration: int | None = None,
         need_auth: bool = True,
     ):
         """
         在群聊中禁言某用户，被禁言的用户在禁言期间将无法发送消息。
         Args:
             user_id(number): 要禁言的用户QQ
-            duration(number): 禁言持续时间（秒），范围为0~86400, 0表示取消禁言
+            duration(number): 禁言持续时间（秒），不填或留空则使用群配置的随机禁言时长，填0表示取消禁言，范围为0~86400
             need_auth(boolean): 是否要进行鉴权，机器人自行发起操作则填False, 当前用户要发起操作则填True
         """
         if need_auth:
