@@ -20,9 +20,14 @@ class NormalHandle:
         target_id: str | int = "",
     ):
         group_config = self.db.get_group_snapshot(event.get_group_id())
+        try:
+            ban_time = int(ban_time) if ban_time is not None else None
+        except (ValueError, TypeError):
+            ban_time = None
+
         if ban_time is None:
             ban_time = self.cfg.get_ban_time_with_range(
-                group_config.get("random_ban_time"), 60
+                group_config.get("random_ban_time"), None
             )
         tids = [target_id] if target_id else get_ats(event)
         results = []
