@@ -182,6 +182,11 @@ class PluginConfig(ConfigNode):
         return min(max(seconds, 0), 2592000)
 
     def build_group_default_config(self) -> dict[str, Any]:
+        perms = dict(self.perms)
+        perms.setdefault("mention_role_manage", "管理员")
+        perms.setdefault("mention_role_list", "成员")
+        perms.setdefault("mention_role_call_entry", "成员")
+        perms.setdefault("mention_role_call", "高等级成员")
         return {
             **self.default,
             "admin_audit": self.admin_audit,
@@ -192,7 +197,7 @@ class PluginConfig(ConfigNode):
             },
             "llm_get_msg_count": self.llm_get_msg_count,
             "level_threshold": self.level_threshold,
-            "perms": dict(self.perms),
+            "perms": perms,
         }
 
     def refresh_runtime_settings(self) -> None:
