@@ -2,7 +2,7 @@ import re
 from collections.abc import Callable, Coroutine
 from typing import Any
 
-from astrbot import logger
+from astrbot.api import logger
 from astrbot.api.star import Context
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
