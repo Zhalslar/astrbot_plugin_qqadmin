@@ -1,5 +1,11 @@
 # 更新日志
 
+## v3.4.2
+
+- 修复聊天指令「改名」把新昵称传到 target_id 导致 int("test") 报错的问题，对象仍从 @ 获取
+- 解禁复用 set_group_ban(duration=0) 时改为解禁文案，并在回包中带上用户名称
+- 聊天侧的禁言 / 解禁 / 全禁重新 yield 结果，并修正误用的 perm_key（set_group_card → set_group_ban / cancel_group_ban）
+
 ## v3.4.0
 
 New Features:
