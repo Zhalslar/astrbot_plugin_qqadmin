@@ -20,10 +20,12 @@ class NormalHandle:
         target_id: str | int = "",
     ):
         group_config = self.db.get_group_snapshot(event.get_group_id())
-        try:
-            ban_time = int(ban_time) if ban_time is not None else None
-        except (ValueError, TypeError):
-            ban_time = None
+        parsed_ban_time = None
+        if ban_time is not None and not isinstance(ban_time, bool):
+            raw = str(ban_time).strip()
+            if raw.lstrip("-").isdigit():
+                parsed_ban_time = int(raw)
+        ban_time = parsed_ban_time
 
         if ban_time is None:
             ban_time = self.cfg.get_ban_time_with_range(
@@ -32,15 +34,24 @@ class NormalHandle:
         tids = [target_id] if target_id else get_ats(event)
         results = []
         for tid in tids:
+            target_name = await get_nickname(event, user_id=tid)
+            user_label = f"{target_name}({tid})"
             try:
                 await event.bot.set_group_ban(
                     group_id=int(event.get_group_id()),
                     user_id=int(tid),
                     duration=ban_time,
                 )
-                results.append(f"用户[{tid}]已被禁言{ban_time}秒")
+                if ban_time == 0:
+                    results.append(f"已解除【{user_label}】的禁言")
+                else:
+                    results.append(f"已将【{user_label}】禁言{ban_time}秒")
             except Exception:
-                results.append(f"用户[{tid}]禁言失败")
+                results.append(
+                    f"解除【{user_label}】禁言失败"
+                    if ban_time == 0
+                    else f"禁言【{user_label}】失败"
+                )
         event.stop_event()
         return "\n".join(results) if results else "未指定要禁言的用户"
 
