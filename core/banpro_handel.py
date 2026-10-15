@@ -4,6 +4,7 @@ import time
 from collections import defaultdict, deque
 
 from astrbot.api import logger
+from astrbot.core.message.components import At, Plain
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
@@ -139,14 +140,24 @@ class BanproHandle:
                 # 禁言发送者
                 ban_time = await self.db.get(gid, "word_ban_time", 0)
                 if ban_time > 0:
+                    sender_id = event.get_sender_id()
                     try:
                         await event.bot.set_group_ban(
-                            group_id=int(event.get_group_id()),
-                            user_id=int(event.get_sender_id()),
+                            group_id=int(gid),
+                            user_id=int(sender_id),
                             duration=ban_time,
                         )
+                        await event.send(
+                            event.chain_result(
+                                [
+                                    Plain("已禁言 "),
+                                    At(qq=int(sender_id)),
+                                    Plain(f"，理由：触发群违禁词「{word}」"),
+                                ]
+                            )
+                        )
                     except Exception:
-                        logger.error(f"bot在群{event.get_group_id()}权限不足，禁言失败")
+                        logger.error(f"bot在群{gid}权限不足，禁言失败")
                         pass
                 return True
         return False
@@ -202,9 +213,14 @@ class BanproHandle:
                         user_id=int(sender_id),
                         duration=ban_time,
                     )
-                    nickname = await get_nickname(event, sender_id)
                     await event.send(
-                        event.plain_result(f"检测到{nickname}刷屏，已禁言")
+                        event.chain_result(
+                            [
+                                Plain("已禁言 "),
+                                At(qq=int(sender_id)),
+                                Plain("，理由：发送消息过快/刷屏"),
+                            ]
+                        )
                     )
                 except Exception:
                     logger.error(f"bot在群{group_id}权限不足，禁言失败")
